@@ -179,9 +179,13 @@ float MultirotorMixer::compute_desaturation_gain(const float *delta_outputs, con
 }
 
 void MultirotorMixer::minimize_saturation(const float *delta_outputs, float *outputs, saturation_status &sat_status,
-		float min_output, float max_output) const
+		float min_output, float max_output, bool reduce_only) const
 {
 	float k1 = compute_desaturation_gain(delta_outputs, outputs, sat_status, min_output, max_output);
+
+	if (reduce_only && k1 > 0.f) {
+		return;
+	}
 
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		outputs[i] += k1 * delta_outputs[i];
@@ -245,27 +249,25 @@ void MultirotorMixer::mix_airmode_disabled(float roll, float pitch, float yaw, f
 			     pitch * _rotors[i].pitch_scale +
 			     thrust * _rotors[i].thrust_scale;
 
-		// Roll & pitch will be used to unsaturate if needed
+		// Thrust will be used to unsaturate if needed
+		_tmp_array[i] = _rotors[i].thrust_scale;
+	}
+
+	// only reduce thrust
+	minimize_saturation(_tmp_array, outputs, _saturation_status, 0.f, 1.f, true);
+
+	// Reduce roll/pitch acceleration if needed to unsaturate
+	for (unsigned i = 0; i < _rotor_count; i++) {
 		_tmp_array[i] = _rotors[i].roll_scale;
 	}
 
-	// Reduce roll/pitch acceleration if needed to unsaturate the lower side.
-	// We must do this before unsaturating the thrust, otherwise a very large
-	// roll/pitch demand would lead to 0 thrust (and thus set roll/pitch to 0 as well)
-	minimize_saturation(_tmp_array, outputs, _saturation_status, 0.f, 1000.f);
+	minimize_saturation(_tmp_array, outputs, _saturation_status);
 
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		_tmp_array[i] = _rotors[i].pitch_scale;
 	}
 
-	minimize_saturation(_tmp_array, outputs, _saturation_status, 0.f, 1000.f);
-
-	// Only reduce thrust to unsaturate the upper side
-	for (unsigned i = 0; i < _rotor_count; i++) {
-		_tmp_array[i] = _rotors[i].thrust_scale;
-	}
-
-	minimize_saturation(_tmp_array, outputs, _saturation_status, -1000.f);
+	minimize_saturation(_tmp_array, outputs, _saturation_status);
 
 	// Mix yaw independently
 	mix_yaw(yaw, outputs);

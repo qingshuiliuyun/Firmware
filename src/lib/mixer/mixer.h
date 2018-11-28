@@ -719,9 +719,10 @@ private:
 	 * @param sat_status saturation status output
 	 * @param min_output minimum desired value in outputs
 	 * @param max_output maximum desired value in outputs
+	 * @param reduce_only if true, only allow to reduce (substract) a fraction of delta_outputs
 	 */
 	void minimize_saturation(const float *delta_outputs, float *outputs, saturation_status &sat_status,
-				 float min_output = 0.f, float max_output = 1.f) const;
+				 float min_output = 0.f, float max_output = 1.f, bool reduce_only = false) const;
 
 	/**
 	 * Mix roll, pitch, yaw, thrust and set the outputs vector.
