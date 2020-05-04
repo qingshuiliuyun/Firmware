@@ -32,6 +32,7 @@ px4_add_board(
 		#distance_sensor/ll40ls
 		#distance_sensor/sf0x
 		gps
+                rac_p1
 		#heater
 		#imu/adis16448
 		#imu # all available imu drivers
